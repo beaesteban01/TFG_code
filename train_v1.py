@@ -176,8 +176,13 @@ def to_xy(df, target):
     # Regression
     return df[result].values.astype(np.float32), df[[target]].values.astype(np.float32)
 
+
+##################################################
 # Break into X (predictors) & y (prediction)
-x, y = to_xy(df,'outcome')
+x, y = to_xy(df,'attack_tag')
+#################################################
+
+
 
 # Create a test/train split.  25% test
 # Split into train/test
