@@ -2,8 +2,10 @@ import tensorflow.contrib.learn as skflow
 import pandas as pd
 import os
 import numpy as np
+import string
 from sklearn import metrics
 from scipy.stats import zscore
+
 # import re
 # import string
 
@@ -89,6 +91,19 @@ def encode_text_dummy(df, name):
         df[dummy_name] = dummies[x]
     df.drop(name, axis=1, inplace=True)
 
+#Clean 'date' column and convert to Int type
+def clean_date(s):
+    s = ''.join([i for i in s if i not in frozenset(string.punctuation)])
+    s_removed = s.replace(" ", "")
+    s_int = int(s_removed)
+    return s_int
+
+########## CLEAN IP #######################
+def clean_ip(s):
+    s = ''.join([i for i in s if i not in frozenset(string.punctuation)])
+    s_int = int(s)
+    return s_int
+
 # Encode a numeric column as zscores
 def encode_numeric_zscore(df, name, mean=None, sd=None):
     if mean is None:
@@ -99,28 +114,34 @@ def encode_numeric_zscore(df, name, mean=None, sd=None):
 
     df[name] = (df[name] - mean) / sd
 
-# Nicely formatted time string
-def hms_string(df, name):
-	sec_elapsed = df[name].column
-    h = int(sec_elapsed / (60 * 60))
-    m = int((sec_elapsed % (60 * 60)) / 60)
-    s = sec_elapsed % 60
-    return f"{h}:{m:>02}:{s:>05.2f}"
 
 
-
+#LAS QUE YA SON NUMEROS
 #encode_numeric_zscore(df, 'duration')
+# encode_numeric_zscore(df, 'source_port')
+# encode_numeric_zscore(df, 'dest_port')
+# encode_numeric_zscore(df, 'forward_status')
+# encode_numeric_zscore(df, 'type_service')
+# encode_numeric_zscore(df, 'pack_exch')
+# encode_numeric_zscore(df, 'bytes')
 
 #DE MOMENTO SOLO TEXT-DUMMY
-# encode_text_dummy(df, 'time')
-# encode_text_dummy(df, 'sip')
-# encode_text_dummy(df, 'dip')
+encode_text_dummy(df, 'protocol')
+encode_text_dummy(df, 'flags')
+encode_text_dummy(df, 'attack_tag')
 
+#Me crea una columna AL FINAL nueva con los valores transformdos asi 20160318105240
+df['cleaned_time'] = df['time'].apply(clean_date)
+df.drop('time', axis=1, inplace=True)
+df['cleaned_sip'] = df['sip'].apply(clean_ip)
+df.drop('sip', axis=1, inplace=True)
+df['cleaned_dip'] = df['dip'].apply(clean_ip)
+df.drop('dip', axis=1, inplace=True)
 
-# encode_text_dummy(df, 'protocol')
-# encode_text_dummy(df, 'flags')
-# encode_text_dummy(df, 'attack_tag')
-hms_string(df, 'time')
+encode_numeric_zscore(df, 'cleaned_time')
+encode_numeric_zscore(df, 'cleaned_sip')
+encode_numeric_zscore(df, 'cleaned_dip')
+
 
 print(df.shape)
 print(df[0:3])
