@@ -1,13 +1,25 @@
-import tensorflow.contrib.learn as skflow
 import pandas as pd
-import os
+import io
+import requests
 import numpy as np
+import os
+
+import tensorflow.contrib.learn as skflow
 import string
-from sklearn import metrics
+
 from scipy.stats import zscore
 
-# import re
-# import string
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+from keras.models import Sequential
+from keras.layers.core import Dense, Activation
+from keras.callbacks import EarlyStopping
+
+#####################################################
+#os.system('python 22_05_Transform_columns.py')
+#No puedo ponerlo asi por que entonces dice que no esta definido df
+#Seguro que hay alguna manera
+#####################################################
 
 path = "../966MB_UGR16.csv"
 # This file is a CSV, just no CSV extension or headers
@@ -146,9 +158,47 @@ encode_numeric_zscore(df, 'cleaned_dip')
 print(df.shape)
 print(df[0:3])
 
+# Convert a Pandas dataframe to the x,y inputs that TensorFlow needs
+def to_xy(df, target):
+    result = []
+    for x in df.columns:
+        if x != target:
+            result.append(x)
+    # find out the type of the target column.  Is it really this hard? :(
+    target_type = df[target].dtypes
+    target_type = target_type[0] if hasattr(
+        target_type, '__iter__') else target_type
+    # Encode to int for classification, float otherwise. TensorFlow likes 32 bits.
+    if target_type in (np.int64, np.int32):
+        # Classification
+        dummies = pd.get_dummies(df[target])
+        return df[result].values.astype(np.float32), dummies.values.astype(np.float32)
+    # Regression
+    return df[result].values.astype(np.float32), df[[target]].values.astype(np.float32)
+
+# Break into X (predictors) & y (prediction)
+x, y = to_xy(df,'outcome')
+
+# Create a test/train split.  25% test
+# Split into train/test
+x_train, x_test, y_train, y_test = train_test_split(
+    x, y, test_size=0.25, random_state=42)
+
+# Create neural net
+model = Sequential()
+model.add(Dense(10, input_dim=x.shape[1], kernel_initializer='normal', activation='relu'))
+model.add(Dense(50, input_dim=x.shape[1], kernel_initializer='normal', activation='relu'))
+model.add(Dense(10, input_dim=x.shape[1], kernel_initializer='normal', activation='relu'))
+model.add(Dense(1, kernel_initializer='normal'))
+model.add(Dense(y.shape[1],activation='softmax'))
+model.compile(loss='categorical_crossentropy', optimizer='adam')
+monitor = EarlyStopping(monitor='val_loss', min_delta=1e-3, patience=5, verbose=1, mode='auto')
+model.fit(x_train,y_train,validation_data=(x_test,y_test),callbacks=[monitor],verbose=2,epochs=1000)
 
 
-
-
-
-
+# Measure accuracy
+pred = model.predict(x_test)
+pred = np.argmax(pred,axis=1)
+y_eval = np.argmax(y_test,axis=1)
+score = metrics.accuracy_score(y_eval, pred)
+print("Validation score: {}".format(score))
