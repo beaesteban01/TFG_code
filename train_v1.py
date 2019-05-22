@@ -14,6 +14,7 @@ from sklearn import metrics
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation
 from keras.callbacks import EarlyStopping
+from sklearn import preprocessing
 
 #####################################################
 #os.system('python 22_05_Transform_columns.py')
@@ -127,6 +128,11 @@ def encode_numeric_zscore(df, name, mean=None, sd=None):
     df[name] = (df[name] - mean) / sd
 
 
+# Encode text values to indexes(i.e. [1],[2],[3] for red,green,blue).
+def encode_text_index(df, name):
+    le = preprocessing.LabelEncoder()
+    df[name] = le.fit_transform(df[name])
+    return le.classes_
 
 #LAS QUE YA SON NUMEROS
 encode_numeric_zscore(df, 'duration')
@@ -140,7 +146,10 @@ encode_numeric_zscore(df, 'bytes')
 
 encode_text_dummy(df, 'protocol')
 encode_text_dummy(df, 'flags')
-encode_text_dummy(df, 'attack_tag')
+#encode_text_dummy(df, 'attack_tag')
+
+outcomes = encode_text_index(df, 'attack_tag')
+num_classes = len(outcomes)
 
 #Me crea una columna AL FINAL nueva con los valores transformdos asi 20160318105240
 df['cleaned_time'] = df['time'].apply(clean_date)
