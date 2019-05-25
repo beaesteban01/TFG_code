@@ -22,7 +22,7 @@ from sklearn import preprocessing
 #Seguro que hay alguna manera
 #####################################################
 
-path = "../966MB_UGR16.csv"
+path = "../july_reduced.csv"
 # This file is a CSV, just no CSV extension or headers
 df = pd.read_csv(path, header=None)
 
@@ -134,14 +134,14 @@ def encode_text_index(df, name):
     df[name] = le.fit_transform(df[name])
     return le.classes_
 
-#LAS QUE YA SON NUMEROS
-encode_numeric_zscore(df, 'duration')
-encode_numeric_zscore(df, 'source_port')
-encode_numeric_zscore(df, 'dest_port')
-encode_numeric_zscore(df, 'forward_status')
-encode_numeric_zscore(df, 'type_service')
-encode_numeric_zscore(df, 'pack_exch')
-encode_numeric_zscore(df, 'bytes')
+#LAS QUE YA SON NUMEROS --> no los normalizo de momento
+# encode_numeric_zscore(df, 'duration')
+# encode_numeric_zscore(df, 'source_port')
+# encode_numeric_zscore(df, 'dest_port')
+# encode_numeric_zscore(df, 'forward_status')
+# encode_numeric_zscore(df, 'type_service')
+# encode_numeric_zscore(df, 'pack_exch')
+# encode_numeric_zscore(df, 'bytes')
 
 
 encode_text_dummy(df, 'protocol')
@@ -152,16 +152,14 @@ outcomes = encode_text_index(df, 'attack_tag')
 num_classes = len(outcomes)
 
 #Me crea una columna AL FINAL nueva con los valores transformdos asi 20160318105240
-df['cleaned_time'] = df['time'].apply(clean_date)
-df.drop('time', axis=1, inplace=True)
-df['cleaned_sip'] = df['sip'].apply(clean_ip)
-df.drop('sip', axis=1, inplace=True)
-df['cleaned_dip'] = df['dip'].apply(clean_ip)
-df.drop('dip', axis=1, inplace=True)
+df['time'] = df['time'].apply(clean_date)
 
-encode_numeric_zscore(df, 'cleaned_time')
-encode_numeric_zscore(df, 'cleaned_sip')
-encode_numeric_zscore(df, 'cleaned_dip')
+df['sip'] = df['sip'].apply(clean_ip)
+df['dip'] = df['dip'].apply(clean_ip)
+
+encode_numeric_zscore(df, 'time')
+encode_numeric_zscore(df, 'sip')
+encode_numeric_zscore(df, 'dip')
 
 
 print(df.shape)
@@ -205,7 +203,7 @@ model.add(Dense(50, input_dim=x.shape[1], kernel_initializer='normal', activatio
 model.add(Dense(10, input_dim=x.shape[1], kernel_initializer='normal', activation='relu'))
 model.add(Dense(1, kernel_initializer='normal'))
 model.add(Dense(y.shape[1],activation='softmax'))
-model.compile(loss='categorical_crossentropy', optimizer='adam')
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 monitor = EarlyStopping(monitor='val_loss', min_delta=1e-3, patience=5, verbose=1, mode='auto')
 model.fit(x_train,y_train,validation_data=(x_test,y_test),callbacks=[monitor],verbose=2,epochs=1000)
 

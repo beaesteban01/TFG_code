@@ -9,7 +9,7 @@ from scipy.stats import zscore
 # import re
 # import string
 
-path = "../966MB_UGR16.csv"
+path = "../july_reduced.csv"
 # This file is a CSV, just no CSV extension or headers
 df = pd.read_csv(path, header=None)
 
@@ -117,13 +117,13 @@ def encode_numeric_zscore(df, name, mean=None, sd=None):
 
 
 #LAS QUE YA SON NUMEROS
-encode_numeric_zscore(df, 'duration')
-encode_numeric_zscore(df, 'source_port')
-encode_numeric_zscore(df, 'dest_port')
-encode_numeric_zscore(df, 'forward_status')
-encode_numeric_zscore(df, 'type_service')
-encode_numeric_zscore(df, 'pack_exch')
-encode_numeric_zscore(df, 'bytes')
+# encode_numeric_zscore(df, 'duration')
+# encode_numeric_zscore(df, 'source_port')
+# encode_numeric_zscore(df, 'dest_port')
+# encode_numeric_zscore(df, 'forward_status')
+# encode_numeric_zscore(df, 'type_service')
+# encode_numeric_zscore(df, 'pack_exch')
+# encode_numeric_zscore(df, 'bytes')
 
 
 encode_text_dummy(df, 'protocol')
@@ -131,16 +131,16 @@ encode_text_dummy(df, 'flags')
 encode_text_dummy(df, 'attack_tag')
 
 #Me crea una columna AL FINAL nueva con los valores transformdos asi 20160318105240
-df['cleaned_time'] = df['time'].apply(clean_date)
-df.drop('time', axis=1, inplace=True)
-df['cleaned_sip'] = df['sip'].apply(clean_ip)
-df.drop('sip', axis=1, inplace=True)
-df['cleaned_dip'] = df['dip'].apply(clean_ip)
-df.drop('dip', axis=1, inplace=True)
+df['time'] = df['time'].apply(clean_date)
 
-encode_numeric_zscore(df, 'cleaned_time')
-encode_numeric_zscore(df, 'cleaned_sip')
-encode_numeric_zscore(df, 'cleaned_dip')
+df['sip'] = df['sip'].apply(clean_ip)
+
+df['dip'] = df['dip'].apply(clean_ip)
+
+
+# encode_numeric_zscore(df, 'cleaned_time')
+# encode_numeric_zscore(df, 'cleaned_sip')
+# encode_numeric_zscore(df, 'cleaned_dip')
 
 
 print(df.shape)
