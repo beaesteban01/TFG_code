@@ -22,34 +22,9 @@ from sklearn import preprocessing
 #Seguro que hay alguna manera
 #####################################################
 
-path = "july_reduced.csv"
+path = "../july_reduced copia.csv"
 # This file is a CSV, just no CSV extension or headers
-df = pd.read_csv(path, header=None)
-
-print("Read {} rows.".format(len(df)))
-# df = df.sample(frac=0.1, replace=False) # Uncomment this line to sample only 10% of the dataset
-df.dropna(inplace=True,axis=1) # For now, just drop NA's (rows with missing values)
-
-# The CSV file has no column heads, so add them
-df.columns = [
-    'time',
-    'duration',
-    'sip',
-    'dip',
-    'source_port',
-    'dest_port',
-    'protocol',
-    'flags',
-    'forward_status',
-    'type_service',
-    'pack_exch',
-    'bytes',
-    'attack_tag'
-]
-
-#print(df[0:3])
-
-ENCODING = 'utf-8'
+df_not_chunk = pd.read_csv(path, header=None, chunksize=200000)
 
 def expand_categories(values):
     result = []
@@ -78,23 +53,7 @@ def analyze(filename):
 
 #analyze(path)
 
-######RESULT######
-#####################################################
-# 9999998 rows
-# ** 2016-03-18 10:52:40:10719 (0%)
-# ** 0.000:35412 (0%)
-# ** 127.204.60.89:892565 (8%)
-# ** 42.219.153.89:4098 (0%)
-# ** 123:65536 (0%)
-# ** 425:64147 (0%)
-# ** UDP:[TCP:62.27%,UDP:36.56%,ICMP:1.05%,GRE:0.06%,ESP:0.05%,IPIP:0.01%,IPv6:0.0%]
-# ** .A....:[.A....:40.27%,.AP.SF:26.33%,.AP.S.:7.04%,.AP...:6.6%,.APRSF:4.37%,.A...F:4.04%,....S.:2.5%,.APRS.:2.18%,.AP..F:1.85%,.A..SF:1.66%,.A.R..:0.87%,.A..S.:0.64%,.A.R.F:0.45%,...R..:0.45%,.APR..:0.44%,.APR.F:0.18%,.A.RS.:0.06%,...RS.:0.04%,.A.RSF:0.02%,......:0.01%,UAP..F:0.0%,UAP.S.:0.0%,..P.S.:0.0%]
-# ** 0:[0:100.0%]
-# ** 0.1:[0:66.46%,40:20.13%,72:8.62%,8:1.48%,64:1.3%,42:0.76%,24:0.4%,2:0.39%,26:0.17%,104:0.07%,75:0.05%,16:0.04%,20:0.02%,192:0.02%,74:0.02%,96:0.01%,28:0.01%,4:0.01%,224:0.01%,43:0.01%,6:0.0%,18:0.0%,12:0.0%,184:0.0%,32:0.0%,73:0.0%,10:0.0%,152:0.0%,23:0.0%,88:0.0%,13:0.0%,3:0.0%,48:0.0%,66:0.0%,160:0.0%,56:0.0%,194:0.0%,80:0.0%,15:0.0%,25:0.0%,9:0.0%,1:0.0%,17:0.0%,14:0.0%,92:0.0%,200:0.0%,19:0.0%,21:0.0%,22:0.0%,30:0.0%,41:0.0%,5:0.0%,240:0.0%,11:0.0%,27:0.0%,68:0.0%,7:0.0%,136:0.0%,29:0.0%]
-# ** 1:8245 (0%)
-# ** 76:116716 (1%)
-# ** background:[background:99.7%,blacklist:0.28%,anomaly-spam:0.02%]
-########################################################
+
 
 # Encode text values to dummy variables(i.e. [1,0,0],[0,1,0],[0,0,1] for red,green,blue)
 def encode_text_dummy(df, name):
@@ -134,37 +93,6 @@ def encode_text_index(df, name):
     df[name] = le.fit_transform(df[name])
     return le.classes_
 
-#LAS QUE YA SON NUMEROS --> no los normalizo de momento
-# encode_numeric_zscore(df, 'duration')
-# encode_numeric_zscore(df, 'source_port')
-# encode_numeric_zscore(df, 'dest_port')
-# encode_numeric_zscore(df, 'forward_status')
-# encode_numeric_zscore(df, 'type_service')
-# encode_numeric_zscore(df, 'pack_exch')
-# encode_numeric_zscore(df, 'bytes')
-
-
-encode_text_dummy(df, 'protocol')
-encode_text_dummy(df, 'flags')
-#encode_text_dummy(df, 'attack_tag')
-
-outcomes = encode_text_index(df, 'attack_tag')
-num_classes = len(outcomes)
-
-#Me crea una columna AL FINAL nueva con los valores transformdos asi 20160318105240
-df['time'] = df['time'].apply(clean_date)
-
-df['sip'] = df['sip'].apply(clean_ip)
-df['dip'] = df['dip'].apply(clean_ip)
-
-encode_numeric_zscore(df, 'time')
-encode_numeric_zscore(df, 'sip')
-encode_numeric_zscore(df, 'dip')
-
-
-print(df.shape)
-print(df[0:3])
-
 # Convert a Pandas dataframe to the x,y inputs that TensorFlow needs
 def to_xy(df, target):
     result = []
@@ -182,6 +110,78 @@ def to_xy(df, target):
         return df[result].values.astype(np.float32), dummies.values.astype(np.float32)
     # Regression
     return df[result].values.astype(np.float32), df[[target]].values.astype(np.float32)
+
+
+
+##########################CHUNKSIZE###################################################
+
+#Each chunk is in a df format
+for df in df_not_chunk:
+    #si no imprime no funciona, da error en el print
+    #print(df[0:2])
+    df_not_chunk = df
+#########################################################################################
+
+
+#print("Read {} rows.".format(len(df)))
+# df = df.sample(frac=0.1, replace=False) # Uncomment this line to sample only 10% of the dataset
+df.dropna(inplace=True,axis=1) # For now, just drop NA's (rows with missing values)
+
+
+# The CSV file has no column heads, so add them
+df.columns = [
+    'time',
+    'duration',
+    'sip',
+    'dip',
+    'source_port',
+    'dest_port',
+    'protocol',
+    'flags',
+    'forward_status',
+    'type_service',
+    'pack_exch',
+    'bytes',
+    'attack_tag'
+]
+
+#print(df[0:3])
+
+ENCODING = 'utf-8'
+
+
+
+#LAS QUE YA SON NUMEROS --> no los normalizo de momento
+# encode_numeric_zscore(df, 'duration')
+# encode_numeric_zscore(df, 'source_port')
+# encode_numeric_zscore(df, 'dest_port')
+# encode_numeric_zscore(df, 'forward_status')
+# encode_numeric_zscore(df, 'type_service')
+# encode_numeric_zscore(df, 'pack_exch')
+# encode_numeric_zscore(df, 'bytes')
+
+df.drop('time', 1, inplace=True)
+
+encode_text_dummy(df, 'protocol')
+encode_text_dummy(df, 'flags')
+#encode_text_dummy(df, 'attack_tag')
+
+outcomes = encode_text_index(df, 'attack_tag')
+num_classes = len(outcomes)
+
+#Me crea una columna AL FINAL nueva con los valores transformdos asi 20160318105240
+#df['time'] = df['time'].apply(clean_date)
+
+df['sip'] = df['sip'].apply(clean_ip)
+df['dip'] = df['dip'].apply(clean_ip)
+
+#encode_numeric_zscore(df, 'time')
+encode_numeric_zscore(df, 'sip')
+encode_numeric_zscore(df, 'dip')
+
+
+print(df.shape)
+print(df[0:3])
 
 
 ##################################################
@@ -204,8 +204,10 @@ model.add(Dense(10, input_dim=x.shape[1], kernel_initializer='normal', activatio
 model.add(Dense(1, kernel_initializer='normal'))
 model.add(Dense(y.shape[1],activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-monitor = EarlyStopping(monitor='val_loss', min_delta=1e-3, patience=5, verbose=1, mode='auto')
+monitor = EarlyStopping(monitor='val_loss', min_delta=1e-10, patience=5, verbose=1, mode='auto')
 model.fit(x_train,y_train,validation_data=(x_test,y_test),callbacks=[monitor],verbose=2,epochs=1000)
+#model.fit(x_train,y_train,validation_data=(x_test,y_test),verbose=2,epochs=500)
+
 
 
 # Measure accuracy
