@@ -3,12 +3,15 @@ import io
 import requests
 import numpy as np
 import os
-
+import matplotlib.pyplot as plt
+import pylab as pl
 import tensorflow.contrib.learn as skflow
 import string
+import Gnuplot as gp
 
+from sklearn.metrics import confusion_matrix
+from sklearn.utils.multiclass import unique_labels
 from scipy.stats import zscore
-
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from keras.models import Sequential
@@ -16,43 +19,10 @@ from keras.layers.core import Dense, Activation
 from keras.callbacks import EarlyStopping
 from sklearn import preprocessing
 
-#####################################################
-#os.system('python 22_05_Transform_columns.py')
-#No puedo ponerlo asi por que entonces dice que no esta definido df
-#Seguro que hay alguna manera
-#####################################################
 
-path = "../july_reduced copia.csv"
+path = "july_600mb.csv"
 # This file is a CSV, just no CSV extension or headers
-df_not_chunk = pd.read_csv(path, header=None, chunksize=200000)
-
-def expand_categories(values):
-    result = []
-    s = values.value_counts()
-    t = float(len(values))
-    for v in s.index:
-        result.append("{}:{}%".format(v,round(100*(s[v]/t),2)))
-    return "[{}]".format(",".join(result))
-        
-def analyze(filename):
-    print()
-    print("Analyzing: {}".format(filename))
-    df = pd.read_csv(filename,encoding=ENCODING)
-    cols = df.columns.values
-    total = float(len(df))
-
-    print("{} rows".format(int(total)))
-    for col in cols:
-        uniques = df[col].unique()
-        unique_count = len(uniques)
-        if unique_count>100:
-            print("** {}:{} ({}%)".format(col,unique_count,int(((unique_count)/total)*100)))
-        else:
-            print("** {}:{}".format(col,expand_categories(df[col])))
-            expand_categories(df[col])
-
-#analyze(path)
-
+df_not_chunk = pd.read_csv(path, header=None, chunksize=600000)
 
 
 # Encode text values to dummy variables(i.e. [1,0,0],[0,1,0],[0,0,1] for red,green,blue)
@@ -86,7 +56,28 @@ def encode_numeric_zscore(df, name, mean=None, sd=None):
 
     df[name] = (df[name] - mean) / sd
 
+#MINMAX -1 1
+# Encode a column to a range between normalized_low and normalized_high.
+def min_max_1(df, name, normalized_low=-1, normalized_high=1,
+                         data_low=None, data_high=None):
+    if data_low is None:
+        data_low = min(df[name])
+        data_high = max(df[name])
 
+    df[name] = ((df[name] - data_low) / (data_high - data_low)) \
+        * (normalized_high - normalized_low) + normalized_low
+
+#MINMAX 0 1
+def min_max_0(df, name, normalized_low=-1, normalized_high=1,
+                         data_low=None, data_high=None):
+    if data_low is None:
+        data_low = min(df[name])
+        data_high = max(df[name])
+
+    df[name] = ((df[name] - data_low) / (data_high - data_low)) \
+        * (normalized_high - normalized_low) + normalized_low
+
+    
 # Encode text values to indexes(i.e. [1],[2],[3] for red,green,blue).
 def encode_text_index(df, name):
     le = preprocessing.LabelEncoder()
@@ -111,6 +102,18 @@ def to_xy(df, target):
     # Regression
     return df[result].values.astype(np.float32), df[[target]].values.astype(np.float32)
 
+# Plot a confusion matrix.
+# cm is the confusion matrix, names are the names of the classes.
+def plot_confusion_matrix(cm, names, title='Confusion matrix', cmap=plt.cm.Blues):
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(names))
+    plt.xticks(tick_marks, names, rotation=45)
+    plt.yticks(tick_marks, names)
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
 
 
 ##########################CHUNKSIZE###################################################
@@ -206,9 +209,7 @@ for df in df_not_chunk:
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     monitor = EarlyStopping(monitor='val_loss', min_delta=1e-10, patience=5, verbose=1, mode='auto')
     model.fit(x_train,y_train,validation_data=(x_test,y_test),callbacks=[monitor],verbose=2,epochs=1000)
-    #model.fit(x_train,y_train,validation_data=(x_test,y_test),verbose=2,epochs=500)
-
-
+    
 
     # Measure accuracy
     pred = model.predict(x_test)
@@ -216,5 +217,25 @@ for df in df_not_chunk:
     y_eval = np.argmax(y_test,axis=1)
     score = metrics.accuracy_score(y_eval, pred)
     print("Validation score: {}".format(score))
-	cm = confusion_matrix(y_eval, pred)
+    
+    print(outcomes)
+    
+    
+    g = gp.gp(persit=1)
+    # Not normalized
+    cm = confusion_matrix(y_eval, pred)
+    np.set_printoptions(precision=2)
+    print('Confusion matrix, without normalization')
     print(cm)
+    g.figure()
+    plot_confusion_matrix(cm, outcomes)
+    
+    # Normalize the confusion matrix by row (i.e by the number of samples
+    # in each class)
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    print('Normalized confusion matrix')
+    print(cm_normalized)
+    g.figure()
+    plot_confusion_matrix(cm_normalized, outcomes, title='Normalized confusion matrix')
+
+    g.show()

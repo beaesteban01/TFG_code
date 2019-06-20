@@ -216,5 +216,3 @@ for df in df_not_chunk:
     y_eval = np.argmax(y_test,axis=1)
     score = metrics.accuracy_score(y_eval, pred)
     print("Validation score: {}".format(score))
-	cm = confusion_matrix(y_eval, pred)
-    print(cm)

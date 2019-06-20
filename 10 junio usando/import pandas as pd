@@ -1,0 +1,42 @@
+import pandas as pd
+df1 = pd.read_csv("scan44_flows_cut.csv", header=None)
+df2 = pd.read_csv("scan11_flows_cut.csv", header=None)
+
+df1.columns = [
+    'time',
+    'duration',
+    'sip',
+    'dip',
+    'source_port',
+    'dest_port',
+    'protocol',
+    'flags',
+    'forward_status',
+    'type_service',
+    'pack_exch',
+    'bytes',
+    'attack_tag'
+]
+
+print(df1[0:2])
+
+df2.columns = [
+    'time',
+    'duration',
+    'sip',
+    'dip',
+    'source_port',
+    'dest_port',
+    'protocol',
+    'flags',
+    'forward_status',
+    'type_service',
+    'pack_exch',
+    'bytes',
+    'attack_tag'
+]
+print(df2[0:2])
+
+df1["attack_tag"] = df2["attack_tag"]
+
+df1.to_csv('2_scan44.csv', header=False, index=False)

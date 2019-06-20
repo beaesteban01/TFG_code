@@ -3,12 +3,13 @@ import io
 import requests
 import numpy as np
 import os
-
+import matplotlib.pyplot as plt
+import pylab as pl
 import tensorflow.contrib.learn as skflow
 import string
-
+from sklearn.metrics import confusion_matrix
+from sklearn.utils.multiclass import unique_labels
 from scipy.stats import zscore
-
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from keras.models import Sequential
@@ -22,37 +23,9 @@ from sklearn import preprocessing
 #Seguro que hay alguna manera
 #####################################################
 
-path = "../july_reduced copia.csv"
+path = "../../july_reduced copia.csv"
 # This file is a CSV, just no CSV extension or headers
-df_not_chunk = pd.read_csv(path, header=None, chunksize=200000)
-
-def expand_categories(values):
-    result = []
-    s = values.value_counts()
-    t = float(len(values))
-    for v in s.index:
-        result.append("{}:{}%".format(v,round(100*(s[v]/t),2)))
-    return "[{}]".format(",".join(result))
-        
-def analyze(filename):
-    print()
-    print("Analyzing: {}".format(filename))
-    df = pd.read_csv(filename,encoding=ENCODING)
-    cols = df.columns.values
-    total = float(len(df))
-
-    print("{} rows".format(int(total)))
-    for col in cols:
-        uniques = df[col].unique()
-        unique_count = len(uniques)
-        if unique_count>100:
-            print("** {}:{} ({}%)".format(col,unique_count,int(((unique_count)/total)*100)))
-        else:
-            print("** {}:{}".format(col,expand_categories(df[col])))
-            expand_categories(df[col])
-
-#analyze(path)
-
+df_not_chunk = pd.read_csv(path, header=None, chunksize=600000)
 
 
 # Encode text values to dummy variables(i.e. [1,0,0],[0,1,0],[0,0,1] for red,green,blue)
@@ -85,8 +58,29 @@ def encode_numeric_zscore(df, name, mean=None, sd=None):
         sd = df[name].std()
 
     df[name] = (df[name] - mean) / sd
+	
+#MINMAX -1 1
+# Encode a column to a range between normalized_low and normalized_high.
+def min_max_1(df, name, normalized_low=-1, normalized_high=1,
+                         data_low=None, data_high=None):
+    if data_low is None:
+        data_low = min(df[name])
+        data_high = max(df[name])
 
+    df[name] = ((df[name] - data_low) / (data_high - data_low)) \
+        * (normalized_high - normalized_low) + normalized_low
+		
+#MINMAX 0 1
+def min_max_0(df, name, normalized_low=-1, normalized_high=1,
+                         data_low=None, data_high=None):
+    if data_low is None:
+        data_low = min(df[name])
+        data_high = max(df[name])
 
+    df[name] = ((df[name] - data_low) / (data_high - data_low)) \
+        * (normalized_high - normalized_low) + normalized_low
+
+    
 # Encode text values to indexes(i.e. [1],[2],[3] for red,green,blue).
 def encode_text_index(df, name):
     le = preprocessing.LabelEncoder()
@@ -216,5 +210,5 @@ for df in df_not_chunk:
     y_eval = np.argmax(y_test,axis=1)
     score = metrics.accuracy_score(y_eval, pred)
     print("Validation score: {}".format(score))
-	cm = confusion_matrix(y_eval, pred)
+    cm = confusion_matrix(y_eval, pred)
     print(cm)
